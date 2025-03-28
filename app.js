@@ -32,6 +32,22 @@ app.command('/hello', async ({ command, ack, say }) => {
   });
 });
 
+// app_mentionイベントをリッスン（ボットがメンションされた時に発火）
+app.event('app_mention', async ({ event, say }) => {
+  try {
+    console.log('メンションを受け取りました:', event);
+
+    // メンションに対する応答メッセージ
+    await say({
+      text: `こんにちは <@${event.user}>さん！何かお手伝いできることはありますか？`,
+      // スレッド内ではなくチャンネルに直接返信するためにthread_tsは指定しない
+    });
+
+  } catch (error) {
+    console.error('エラーが発生しました:', error);
+  }
+});
+
 // エラーハンドリング
 app.error((error) => {
   console.error('エラーが発生しました:', error);

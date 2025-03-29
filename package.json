@@ -2,10 +2,11 @@
   "name": "slack-hello-bot",
   "version": "1.0.0",
   "description": "Slackのhelloコマンドに応答するシンプルなボット",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "zip": "zip -r function.zip . -x \"*.git*\" -x \"node_modules/.bin/*\""
   },
   "dependencies": {
     "@slack/bolt": "^3.12.2",

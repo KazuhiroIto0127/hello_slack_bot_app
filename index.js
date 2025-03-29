@@ -1,15 +1,23 @@
 // Slack Bot アプリケーション
-const { App } = require('@slack/bolt');
+const { App, AwsLambdaReceiver, LogLevel } = require('@slack/bolt'); // LogLevel を追加
 
-// 環境変数から認証情報を取得
-require('dotenv').config();
+// AWS Lambda用のレシーバーを初期化
+const awsLambdaReceiver = new AwsLambdaReceiver({
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  logLevel: LogLevel.DEBUG, // デバッグログを有効化
+  processBeforeResponse: true // API Gatewayに応答する前にリクエストを処理
+});
 
-// Bolt アプリの初期化
+
+// Slack Boltアプリの初期化
+console.log('Slack Boltアプリを初期化しています...');
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  socketMode: true, // ソケットモードを有効化
-  appToken: process.env.SLACK_APP_TOKEN // ソケットモード用のアプリレベルトークン
+  receiver: awsLambdaReceiver,
+  // デバッグ用に詳細なログを有効化
+  logLevel: 'debug',
+  // スラッシュコマンドに応答するためのシークレット
+  // signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
 const { say_command } = require('./say_command'); // Import the command function
@@ -17,9 +25,11 @@ const { createTaskModal } = require('./modals/task_modal'); // Import the extern
 const { postTaskMessage } = require('./utils/task_utils'); // Import the external function
 
 // /hello コマンドに応答
-app.command('/hello', async ({ command, ack, say }) => {
+app.command('/hello', async ({ command, ack, say, logger }) => {
   // コマンドの受信を確認
   await ack();
+
+  logger.info('helloコマンド受信:', command);
 
   // 「hello」メッセージを送信
   await say({
@@ -117,8 +127,14 @@ app.error((error) => {
   console.error('エラーが発生しました:', error);
 });
 
-// アプリの起動
-(async () => {
-  await app.start(process.env.PORT || 3000);
-  console.log('⚡️ Bolt アプリが起動しました');
-})();
+// Lambda関数のハンドラー
+module.exports.handler = async (event, context, callback) => {
+  // console.log('Lambdaイベント受信:', JSON.stringify(event)); // 必要に応じてデバッグログ
+
+  // AwsLambdaReceiverにイベント処理を委譲
+  const handler = await awsLambdaReceiver.start();
+  return handler(event, context, callback);
+
+  // try-catch は AwsLambdaReceiver が内部で行うため、通常は不要
+  // どうしてもハンドラーレベルでキャッチしたい例外がある場合のみ追加
+};
